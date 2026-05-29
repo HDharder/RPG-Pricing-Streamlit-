@@ -25,7 +25,7 @@ if 'propriedades_item' not in st.session_state:
 if 'const_base' not in st.session_state: st.session_state.const_base = 50.0
 if 'const_exp' not in st.session_state: st.session_state.const_exp = 1.5
 
-if 'mundo_sel' not in st.session_state: st.session_state.mundo_sel = "Fantasia Padrão (Mídia) - x2.0"
+if 'mundo_sel' not in st.session_state: st.session_state.mundo_sel = "Fantasia Padrão (Média) - x2.0"
 if 'req_sint' not in st.session_state: st.session_state.req_sint = "Não (x1.0)"
 if 'tipo_consumo' not in st.session_state: st.session_state.tipo_consumo = "Permanente/Ilimitado (x1.0)"
 if 'disruptivo' not in st.session_state: st.session_state.disruptivo = False
@@ -48,7 +48,7 @@ st.sidebar.subheader("🌍 Configuração do Mundo")
 
 mundo_opcoes = {
     "Alta Magia (High Magic)": 1.0,
-    "Fantasia Padrão (Mídia)": 2.0,
+    "Fantasia Padrão (Média)": 2.0,
     "Baixa Magia (Low Magic)": 4.0
 }
 st.sidebar.radio("Nível de Magia da Campanha:", list(mundo_opcoes.keys()), key="mundo_sel")
@@ -160,6 +160,8 @@ with aba1:
 
 with aba2:
     st.header("Biblioteca de Poderes")
+    st.write("Edite os valores livremente. Qualquer alteração aqui refletirá instantaneamente nos itens que já estão na sua Forja!")
+
     df_editado = st.data_editor(
         st.session_state.tabela_regras, 
         num_rows="dynamic",
@@ -175,6 +177,13 @@ with aba2:
 with aba3:
     st.header("Matemática do Sistema")
     st.latex(r"Custo = \left( \sum P \right)^{Exponente} \times A \times C \times M \times Base")
+    st.write("- **P:** Soma dos Pontos das Propriedades Mágicas")
+    st.write("- **A:** Modificador de Sintonização")
+    st.write("- **C:** Modificador de Consumo")
+    st.write("- **M:** Modificador do Mundo (Lateral)")
+    
+    st.markdown("---")
+    st.subheader("Ajustar Constantes do Universo")
     
     col_c1, col_c2 = st.columns(2)
     with col_c1:
