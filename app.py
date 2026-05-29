@@ -75,4 +75,123 @@ with aba1:
                 "id": str(uuid.uuid4()), # ID único para o Streamlit não bugar os botões
                 "nome": linha["Propriedade Mágica"],
                 "custo_base": linha["Custo (P)"],
-                "tipo": linha
+                "tipo": linha["Tipo"],
+                "multiplicador": 1 # Valor default do input do usuário
+            })
+            st.rerun()
+
+    st.markdown("### Propriedades do Item Atual")
+    
+    pontos_totais = 0
+    
+    # Renderiza os itens adicionados modularmente
+    if not st.session_state.propriedades_item:
+        st.info("Nenhuma propriedade adicionada ainda. Use a caixa acima para começar a forjar.")
+    else:
+        for index, item in enumerate(st.session_state.propriedades_item):
+            c1, c2, c3, c4 = st.columns([4, 2, 2, 1])
+            with c1:
+                st.markdown(f"**{item['nome']}**")
+                st.caption(f"Base: {item['custo_base']} pts | {item['tipo']}")
+            with c2:
+                if "Multiplicador" in item["tipo"]:
+                    item["multiplicador"] = st.number_input(
+                        "Quantidade/Nível", 
+                        min_value=1, value=item["multiplicador"], 
+                        key=f"mult_{item['id']}"
+                    )
+                else:
+                    st.write("*(Custo Fixo)*")
+                    item["multiplicador"] = 1
+            
+            pontos_calc = item["custo_base"] * item["multiplicador"]
+            pontos_totais += pontos_calc
+            
+            with c3:
+                st.markdown(f"<h4 style='text-align: center; color: #ff4b4b;'>{pontos_calc} pts</h4>", unsafe_allow_html=True)
+            with c4:
+                if st.button("🗑️", key=f"del_{item['id']}"):
+                    st.session_state.propriedades_item.pop(index)
+                    st.rerun()
+
+    st.markdown("---")
+    
+    # Variáveis A (Sintonização) e C (Consumo)
+    col_a, col_c = st.columns(2)
+    with col_a:
+        st.subheader("Modificador A (Sintonização)")
+        req_sint = st.radio("O item exige sintonização?", ["Não (x1.0)", "Sim (x0.75)", "Amaldiçoado (x0.5)"], index=0)
+        if "Não" in req_sint: mod_a = 1.0
+        elif "Sim" in req_sint: mod_a = 0.75
+        else: mod_a = 0.5
+
+    with col_c:
+        st.subheader("Modificador C (Consumo)")
+        tipo_consumo = st.radio("Frequência de Uso:", ["Permanente/Ilimitado (x1.0)", "Cargas Diárias (x0.9)", "Uso Único/Consumível (x0.1)"], index=0)
+        if "Permanente" in tipo_consumo: mod_c = 1.0
+        elif "Cargas" in tipo_consumo: mod_c = 0.9
+        else: mod_c = 0.1
+        
+        disruptivo = st.checkbox("⚠️ Item Disruptivo (Ignora consumo, dobra preço)")
+        if disruptivo:
+            mod_c = 1.0
+
+    # CÁLCULO FINAL
+    st.markdown("---")
+    st.markdown("## 💰 Resumo Financeiro")
+    
+    preco_base = (pontos_totais ** st.session_state.const_exp) * mod_a * mod_c * mod_mundo * st.session_state.const_base
+    
+    if disruptivo:
+        preco_base *= 2
+
+    preco_final = int(preco_base) # Arredonda o valor
+    
+    st.success(f"**Pontuação Total de Poder (P):** {pontos_totais}")
+    st.markdown(f"<h1 style='text-align: center; color: gold; font-size: 50px;'>{preco_final:,} PO</h1>".replace(',', '.'), unsafe_allow_html=True)
+
+# --- ABA 2: TABELA DE REGRAS ---
+with aba2:
+    st.header("Biblioteca de Poderes")
+    st.write("Você pode editar os valores clicando nas células, ou adicionar/remover linhas usando a interface abaixo.")
+    
+    # Data Editor nativo do Streamlit, permite add/delete rows facilmente!
+    df_editado = st.data_editor(
+        st.session_state.tabela_regras, 
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={
+            "Tipo": st.column_config.SelectboxColumn(
+                "Tipo de Cálculo",
+                help="Se é cobrado uma vez ou por quantidade",
+                options=["Fixo", "Multiplicador (Por +1)", "Multiplicador (Por Dado)", "Multiplicador (Por Nível)"],
+                required=True
+            )
+        }
+    )
+    
+    # Salva as alterações feitas no editor de volta no session_state
+    st.session_state.tabela_regras = df_editado
+
+# --- ABA 3: FÓRMULA & CONFIGS ---
+with aba3:
+    st.header("Matemática do Sistema")
+    st.latex(r"Custo = \left( \sum P \right)^{Exponente} \times A \times C \times M \times Base")
+    st.write("- **P:** Soma dos Pontos das Propriedades Mágicas")
+    st.write("- **A:** Sintonização | **C:** Consumo | **M:** Modificador do Mundo (Lateral)")
+    
+    st.markdown("---")
+    st.subheader("Ajustar Constantes do Universo")
+    
+    st.session_state.const_base = st.number_input(
+        "Constante Base (Ouro):", 
+        value=st.session_state.const_base, 
+        help="Aumente para inflacionar a economia, diminua para deflacionar."
+    )
+    
+    st.session_state.const_exp = st.number_input(
+        "Constante Exponencial (Escala de Poder):", 
+        value=st.session_state.const_exp, 
+        min_value=1.0, max_value=2.5, step=0.1,
+        help="CUIDADO! Limite máximo de 2.5. Acima disso, os preços explodem matematicamente."
+    )
