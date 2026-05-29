@@ -20,11 +20,11 @@ if 'tabela_regras' not in st.session_state:
         {"Propriedade Mágica": "Magia (Níveis 7 a 9)", "Custo (P)": 8, "Tipo": "Multiplicador (Por Nível)", "Exemplo": "Magia Nv 9 = 72 pts"},
     ])
 
-# Itens adicionados na calculadora (Aba 1)
+# Itens adicionados (Agora guardamos apenas o nome, para buscar o preço atualizado na tabela)
 if 'propriedades_item' not in st.session_state:
     st.session_state.propriedades_item = []
 
-# Constantes da Fórmula (Aba 3)
+# Constantes da Fórmula
 if 'const_base' not in st.session_state:
     st.session_state.const_base = 50.0
 if 'const_exp' not in st.session_state:
@@ -38,9 +38,9 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("🌍 Configuração do Mundo")
 
 mundo_opcoes = {
-    "Alta Magia (High Magic)": 1.0,
-    "Fantasia Padrão (Mídia)": 2.0,
-    "Baixa Magia (Low Magic)": 4.0
+    "Alta Magia (High Magic) - x1.0": 1.0,
+    "Fantasia Padrão (Mídia) - x2.0": 2.0,
+    "Baixa Magia (Low Magic) - x4.0": 4.0
 }
 mundo_selecionado = st.sidebar.radio(
     "Nível de Magia da Campanha:",
@@ -50,53 +50,99 @@ mundo_selecionado = st.sidebar.radio(
 mod_mundo = mundo_opcoes[mundo_selecionado]
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Desenvolvido para Mestres de RPG")
+st.sidebar.caption("O cálculo se atualiza automaticamente com o ambiente.")
 
 # ==========================================
 # 3. ABAS PRINCIPAIS
 # ==========================================
-aba1, aba2, aba3 = st.tabs(["⚒️ Forja de Itens (Principal)", "📚 Tabela de Pontos", "⚙️ Fórmula & Configs"])
+aba1, aba2, aba3 = st.tabs(["⚒️ Forja de Itens", "📚 Tabela de Pontos", "⚙️ Fórmula & Configs"])
 
 # --- ABA 1: CALCULADORA PRINCIPAL ---
 with aba1:
     st.header("Forja de Itens Mágicos")
     
-    # Seleção de Propriedade
-    col_sel, col_btn = st.columns([4, 1])
+    # CONTAINER MÁGICO DO TOPO (Reservando espaço para o Preço Final)
+    # Tudo escrito aqui dentro só será renderizado no final do código desta aba.
+    container_resumo = st.empty() 
+    
+    st.markdown("---")
+    
+    # ----------------------------------------------------
+    # SEÇÃO DO MEIO: Modificadores A e C
+    # ----------------------------------------------------
+    col_a, col_c = st.columns(2)
+    with col_a:
+        st.subheader("Modificador A (Sintonização)")
+        req_sint = st.radio("O item exige sintonização?", ["Não (x1.0)", "Sim (x0.75)", "Amaldiçoado (x0.5)"], index=0, horizontal=True)
+        if "Não" in req_sint: mod_a = 1.0
+        elif "Sim" in req_sint: mod_a = 0.75
+        else: mod_a = 0.5
+
+    with col_c:
+        st.subheader("Modificador C (Consumo)")
+        tipo_consumo = st.radio("Frequência de Uso:", ["Permanente/Ilimitado (x1.0)", "Cargas Diárias (x0.9)", "Consumível (x0.1)"], index=0, horizontal=True)
+        if "Permanente" in tipo_consumo: mod_c = 1.0
+        elif "Cargas" in tipo_consumo: mod_c = 0.9
+        else: mod_c = 0.1
+        
+        disruptivo = st.checkbox("⚠️ Item Disruptivo (Ignora consumo, dobra preço base)")
+        if disruptivo: mod_c = 1.0
+
+    st.markdown("---")
+    
+    # ----------------------------------------------------
+    # SEÇÃO INFERIOR: Adição e Lista de Propriedades
+    # ----------------------------------------------------
+    st.subheader("Propriedades do Item")
+    
+    # Alinhamento perfeito do botão com a caixa de texto usando vertical_alignment
+    col_sel, col_btn = st.columns([4, 1], vertical_alignment="bottom")
     with col_sel:
         opcoes_lista = st.session_state.tabela_regras["Propriedade Mágica"].tolist()
-        prop_selecionada = st.selectbox("Selecione um poder para adicionar:", opcoes_lista)
+        prop_selecionada = st.selectbox("Selecione um poder para adicionar à forja:", opcoes_lista)
     with col_btn:
-        st.write("") # Espaçamento
-        if st.button("➕ Adicionar", use_container_width=True):
-            # Busca as infos na tabela base
-            linha = st.session_state.tabela_regras[st.session_state.tabela_regras["Propriedade Mágica"] == prop_selecionada].iloc[0]
+        if st.button("➕ Adicionar Poder", use_container_width=True):
             st.session_state.propriedades_item.append({
-                "id": str(uuid.uuid4()), # ID único para o Streamlit não bugar os botões
-                "nome": linha["Propriedade Mágica"],
-                "custo_base": linha["Custo (P)"],
-                "tipo": linha["Tipo"],
-                "multiplicador": 1 # Valor default do input do usuário
+                "id": str(uuid.uuid4()), 
+                "nome": prop_selecionada,
+                "multiplicador": 1 # Valor default
             })
             st.rerun()
 
-    st.markdown("### Propriedades do Item Atual")
-    
+    st.markdown("<br>", unsafe_allow_html=True)
     pontos_totais = 0
     
-    # Renderiza os itens adicionados modularmente
+    # Renderiza os itens adicionados lendo os valores atualizados da Tabela
     if not st.session_state.propriedades_item:
-        st.info("Nenhuma propriedade adicionada ainda. Use a caixa acima para começar a forjar.")
+        st.info("Nenhuma propriedade adicionada ainda. Use a caixa acima para começar.")
     else:
         for index, item in enumerate(st.session_state.propriedades_item):
-            c1, c2, c3, c4 = st.columns([4, 2, 2, 1])
+            # Busca o custo e tipo sempre na tabela atualizada (Reatividade Total!)
+            linha_atual = st.session_state.tabela_regras[st.session_state.tabela_regras["Propriedade Mágica"] == item["nome"]]
+            
+            if linha_atual.empty:
+                st.error(f"Propriedade '{item['nome']}' foi removida da tabela principal.")
+                continue
+                
+            custo_base = float(linha_atual.iloc[0]["Custo (P)"])
+            tipo_prop = str(linha_atual.iloc[0]["Tipo"])
+            
+            # Layout da linha de propriedade
+            c1, c2, c3, c4 = st.columns([4, 2, 2, 1], vertical_alignment="center")
             with c1:
                 st.markdown(f"**{item['nome']}**")
-                st.caption(f"Base: {item['custo_base']} pts | {item['tipo']}")
+                st.caption(f"Custo Base: {int(custo_base)} pts")
+            
             with c2:
-                if "Multiplicador" in item["tipo"]:
+                # LÓGICA DE TEXTO INTELIGENTE (Dynamic Labels)
+                if "Por +1" in tipo_prop: label_texto = "Valor do modificador"
+                elif "Por Dado" in tipo_prop: label_texto = "Quantidade de dados"
+                elif "Por Nível" in tipo_prop: label_texto = "Nível"
+                else: label_texto = "Quantidade"
+
+                if "Multiplicador" in tipo_prop:
                     item["multiplicador"] = st.number_input(
-                        "Quantidade/Nível", 
+                        label_texto, 
                         min_value=1, value=item["multiplicador"], 
                         key=f"mult_{item['id']}"
                     )
@@ -104,58 +150,34 @@ with aba1:
                     st.write("*(Custo Fixo)*")
                     item["multiplicador"] = 1
             
-            pontos_calc = item["custo_base"] * item["multiplicador"]
+            pontos_calc = custo_base * item["multiplicador"]
             pontos_totais += pontos_calc
             
             with c3:
-                st.markdown(f"<h4 style='text-align: center; color: #ff4b4b;'>{pontos_calc} pts</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='text-align: center; color: #ff4b4b; margin: 0;'>{int(pontos_calc)} pts</h4>", unsafe_allow_html=True)
             with c4:
-                if st.button("🗑️", key=f"del_{item['id']}"):
+                if st.button("🗑️", key=f"del_{item['id']}", help="Remover propriedade"):
                     st.session_state.propriedades_item.pop(index)
                     st.rerun()
 
-    st.markdown("---")
-    
-    # Variáveis A (Sintonização) e C (Consumo)
-    col_a, col_c = st.columns(2)
-    with col_a:
-        st.subheader("Modificador A (Sintonização)")
-        req_sint = st.radio("O item exige sintonização?", ["Não (x1.0)", "Sim (x0.75)", "Amaldiçoado (x0.5)"], index=0)
-        if "Não" in req_sint: mod_a = 1.0
-        elif "Sim" in req_sint: mod_a = 0.75
-        else: mod_a = 0.5
-
-    with col_c:
-        st.subheader("Modificador C (Consumo)")
-        tipo_consumo = st.radio("Frequência de Uso:", ["Permanente/Ilimitado (x1.0)", "Cargas Diárias (x0.9)", "Uso Único/Consumível (x0.1)"], index=0)
-        if "Permanente" in tipo_consumo: mod_c = 1.0
-        elif "Cargas" in tipo_consumo: mod_c = 0.9
-        else: mod_c = 0.1
-        
-        disruptivo = st.checkbox("⚠️ Item Disruptivo (Ignora consumo, dobra preço)")
-        if disruptivo:
-            mod_c = 1.0
-
-    # CÁLCULO FINAL
-    st.markdown("---")
-    st.markdown("## 💰 Resumo Financeiro")
-    
+    # ----------------------------------------------------
+    # CÁLCULO FINAL E RENDERIZAÇÃO NO TOPO
+    # ----------------------------------------------------
     preco_base = (pontos_totais ** st.session_state.const_exp) * mod_a * mod_c * mod_mundo * st.session_state.const_base
+    if disruptivo: preco_base *= 2
+    preco_final = int(preco_base)
     
-    if disruptivo:
-        preco_base *= 2
-
-    preco_final = int(preco_base) # Arredonda o valor
-    
-    st.success(f"**Pontuação Total de Poder (P):** {pontos_totais}")
-    st.markdown(f"<h1 style='text-align: center; color: gold; font-size: 50px;'>{preco_final:,} PO</h1>".replace(',', '.'), unsafe_allow_html=True)
+    # Preenchemos a "caixa vazia" que criamos lá em cima!
+    with container_resumo.container():
+        st.markdown("## 💰 Valor de Mercado")
+        st.info(f"**Matemática:** {pontos_totais} Pontos de Poder × [A({mod_a}) × C({mod_c}) × Mundo({mod_mundo})]")
+        st.markdown(f"<h1 style='text-align: center; color: gold; font-size: 55px; margin-top: 0;'>{preco_final:,} PO</h1>".replace(',', '.'), unsafe_allow_html=True)
 
 # --- ABA 2: TABELA DE REGRAS ---
 with aba2:
     st.header("Biblioteca de Poderes")
-    st.write("Você pode editar os valores clicando nas células, ou adicionar/remover linhas usando a interface abaixo.")
+    st.write("Edite os valores livremente. Qualquer alteração aqui refletirá instantaneamente nos itens que já estão na sua Forja!")
     
-    # Data Editor nativo do Streamlit, permite add/delete rows facilmente!
     df_editado = st.data_editor(
         st.session_state.tabela_regras, 
         num_rows="dynamic",
@@ -166,11 +188,15 @@ with aba2:
                 help="Se é cobrado uma vez ou por quantidade",
                 options=["Fixo", "Multiplicador (Por +1)", "Multiplicador (Por Dado)", "Multiplicador (Por Nível)"],
                 required=True
+            ),
+            "Custo (P)": st.column_config.NumberColumn(
+                "Custo em Pontos (P)",
+                min_value=1,
+                required=True
             )
-        }
+        },
+        key="editor_tabela" # Chave nativa garante a reatividade
     )
-    
-    # Salva as alterações feitas no editor de volta no session_state
     st.session_state.tabela_regras = df_editado
 
 # --- ABA 3: FÓRMULA & CONFIGS ---
@@ -178,20 +204,25 @@ with aba3:
     st.header("Matemática do Sistema")
     st.latex(r"Custo = \left( \sum P \right)^{Exponente} \times A \times C \times M \times Base")
     st.write("- **P:** Soma dos Pontos das Propriedades Mágicas")
-    st.write("- **A:** Sintonização | **C:** Consumo | **M:** Modificador do Mundo (Lateral)")
+    st.write("- **A:** Modificador de Sintonização")
+    st.write("- **C:** Modificador de Consumo")
+    st.write("- **M:** Modificador do Mundo (Lateral)")
     
     st.markdown("---")
     st.subheader("Ajustar Constantes do Universo")
+    st.write("Altere a economia global do seu jogo aqui. Afeta tudo instantaneamente.")
     
-    st.session_state.const_base = st.number_input(
-        "Constante Base (Ouro):", 
-        value=st.session_state.const_base, 
-        help="Aumente para inflacionar a economia, diminua para deflacionar."
-    )
-    
-    st.session_state.const_exp = st.number_input(
-        "Constante Exponencial (Escala de Poder):", 
-        value=st.session_state.const_exp, 
-        min_value=1.0, max_value=2.5, step=0.1,
-        help="CUIDADO! Limite máximo de 2.5. Acima disso, os preços explodem matematicamente."
-    )
+    col_c1, col_c2 = st.columns(2)
+    with col_c1:
+        st.session_state.const_base = st.number_input(
+            "Constante Base (Ouro):", 
+            value=st.session_state.const_base, 
+            help="Aumente para inflacionar a economia (ex: peças de platina), diminua para deflacionar."
+        )
+    with col_c2:
+        st.session_state.const_exp = st.number_input(
+            "Constante Exponencial (Escala de Poder):", 
+            value=st.session_state.const_exp, 
+            min_value=1.0, max_value=2.5, step=0.1,
+            help="CUIDADO! Limite máximo de 2.5."
+        )
