@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import uuid
+import json
 
 # ==========================================
 # 1. CONFIGURAÇÃO INICIAL E ESTADO DA SESSÃO
@@ -8,16 +9,10 @@ import uuid
 st.set_page_config(page_title="PPA - Precificador Arcano", page_icon="🎲", layout="wide")
 
 if 'tabela_regras' not in st.session_state:
-    st.session_state.tabela_regras = pd.DataFrame([
-        {"Propriedade Mágica": "Bônus de Ataque/Dano", "Custo (P)": 3, "Tipo": "Multiplicador (Por +1)", "Exemplo": "Espada +1 (3 pts)"},
-        {"Propriedade Mágica": "Dano Extra (Dados)", "Custo (P)": 4, "Tipo": "Multiplicador (Por Dado)", "Exemplo": "Língua de Fogo (+1d6)"},
-        {"Propriedade Mágica": "Bônus na CA", "Custo (P)": 5, "Tipo": "Multiplicador (Por +1)", "Exemplo": "Escudo +2 (10 pts)"},
-        {"Propriedade Mágica": "Resistência a Dano", "Custo (P)": 10, "Tipo": "Fixo", "Exemplo": "Anel de Resistência a Fogo"},
-        {"Propriedade Mágica": "Voo (Ilimitado)", "Custo (P)": 15, "Tipo": "Fixo", "Exemplo": "Botas Aladas"},
-        {"Propriedade Mágica": "Magia (Níveis 1 a 3)", "Custo (P)": 2, "Tipo": "Multiplicador (Por Nível)", "Exemplo": "Magia Nv 2 = 4 pts"},
-        {"Propriedade Mágica": "Magia (Níveis 4 a 6)", "Custo (P)": 4, "Tipo": "Multiplicador (Por Nível)", "Exemplo": "Magia Nv 5 = 20 pts"},
-        {"Propriedade Mágica": "Magia (Níveis 7 a 9)", "Custo (P)": 8, "Tipo": "Multiplicador (Por Nível)", "Exemplo": "Magia Nv 9 = 72 pts"},
-    ])
+    # O feitiço agora lê diretamente do arquivo no GitHub
+    with open('regras.json', 'r', encoding='utf-8') as f:
+        dados_regras = json.load(f)
+    st.session_state.tabela_regras = pd.DataFrame(dados_regras)
 
 if 'propriedades_item' not in st.session_state:
     st.session_state.propriedades_item = []
@@ -162,22 +157,17 @@ with aba2:
     st.header("Biblioteca de Poderes")
     st.write("Edite os valores livremente. Qualquer alteração aqui refletirá instantaneamente nos itens que já estão na sua Forja!")
 
-    df_editado = st.data_editor(
+    # Exibe a tabela carregada do JSON
+    st.dataframe(
         st.session_state.tabela_regras, 
-        num_rows="dynamic",
         use_container_width=True,
-        column_config={
-            "Tipo": st.column_config.SelectboxColumn("Tipo de Cálculo", options=["Fixo", "Multiplicador (Por +1)", "Multiplicador (Por Dado)", "Multiplicador (Por Nível)"], required=True),
-            "Custo (P)": st.column_config.NumberColumn("Custo em Pontos (P)", min_value=1, required=True)
-        },
-        key="editor_tabela"
+        hide_index=True
     )
-    st.session_state.tabela_regras = df_editado
 
 with aba3:
     st.header("Matemática do Sistema")
     st.latex(r"Custo = \left( \sum P \right)^{Exponente} \times A \times C \times M \times Base")
-    st.write("- **P:** Soma dos Pontos das Propriedades Mágicas")
+    st.write("- **\sum P:** Soma dos Pontos das Propriedades Mágicas")
     st.write("- **A:** Modificador de Sintonização")
     st.write("- **C:** Modificador de Consumo")
     st.write("- **M:** Modificador do Mundo (Lateral)")
