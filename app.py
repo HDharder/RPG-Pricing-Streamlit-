@@ -9,9 +9,13 @@ import json
 st.set_page_config(page_title="PPA - Precificador Arcano", page_icon="🎲", layout="wide")
 
 if 'tabela_regras' not in st.session_state:
-    # O feitiço agora lê diretamente do arquivo no GitHub
-    with open('regras.json', 'r', encoding='utf-8') as f:
-        dados_regras = json.load(f)
+    try:
+        with open('regras.json', 'r', encoding='utf-8') as f:
+            dados_regras = json.load(f)
+    except FileNotFoundError:
+        # Prevenção de falhas caso a runa falhe ou o arquivo não seja encontrado
+        dados_regras = [] 
+        
     st.session_state.tabela_regras = pd.DataFrame(dados_regras)
 
 if 'propriedades_item' not in st.session_state:
@@ -158,11 +162,27 @@ with aba2:
     st.write("Edite os valores livremente. Qualquer alteração aqui refletirá instantaneamente nos itens que já estão na sua Forja!")
 
     # Exibe a tabela carregada do JSON
-    st.dataframe(
+    df_editado = st.data_editor(
         st.session_state.tabela_regras, 
+        num_rows="dynamic", # Habilita a criação de novas linhas temporárias
         use_container_width=True,
-        hide_index=True
+        column_config={
+            "Tipo": st.column_config.SelectboxColumn(
+                "Tipo de Cálculo", 
+                options=["Fixo", "Multiplicador (Por +1)", "Multiplicador (Por Dado)", "Multiplicador (Por Nível)"], 
+                required=True
+            ),
+            "Custo (P)": st.column_config.NumberColumn(
+                "Custo em Pontos (P)", 
+                min_value=1, 
+                required=True
+            )
+        },
+        key="editor_tabela_volatil"
     )
+    
+    # Atualiza a memória da sessão atual com os feitiços inventados na hora
+    st.session_state.tabela_regras = df_editado
 
 with aba3:
     st.header("Matemática do Sistema")
