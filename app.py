@@ -92,15 +92,18 @@ mundo_opcoes = {
 }
 st.sidebar.radio("Nível de Magia da Campanha:", list(mundo_opcoes.keys()), key="mundo_sel")
 
-# Empurra o conteúdo para baixo
-st.sidebar.markdown("<br><br>", unsafe_allow_html=True) 
-st.sidebar.markdown("---")
+versao_grimorio = "v0.8.2"
 
-# Controle de versão (Altere aqui nas próximas atualizações)
-versao_grimorio = "v0.8.1"
+# Conjura um bloco HTML/CSS com ancoragem fixa
+rodape_html = f"""
+<div style="position: fixed; bottom: 20px; width: 100%; padding-right: 20px; font-size: 14px; color: #a0a0a0;">
+    <hr style="border-color: #555; margin-bottom: 10px;">
+    📜 <b>Versão {versao_grimorio}</b><br>
+    <span style="font-size: 12px;">Cálculo 100% reativo ao ambiente.</span>
+</div>
+"""
 
-# Renderiza a legenda com a versão em destaque
-st.sidebar.caption(f"📜 **Versão {versao_grimorio}**")
+st.sidebar.markdown(rodape_html, unsafe_allow_html=True)
 
 # ==========================================
 # 3. ABAS PRINCIPAIS
