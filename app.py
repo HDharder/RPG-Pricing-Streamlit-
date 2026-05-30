@@ -92,11 +92,11 @@ mundo_opcoes = {
 }
 st.sidebar.radio("Nível de Magia da Campanha:", list(mundo_opcoes.keys()), key="mundo_sel")
 
-versao_grimorio = "v0.8.2"
+versao_grimorio = "v0.8.3"
 
 # Conjura um bloco HTML/CSS com ancoragem fixa
 rodape_html = f"""
-<div style="position: fixed; bottom: 20px; width: 100%; padding-right: 20px; font-size: 14px; color: #a0a0a0;">
+<div style="position: fixed; bottom: 20px; width: 300px; padding-right: 20px; font-size: 14px; color: #a0a0a0;">
     <hr style="border-color: #555; margin-bottom: 10px;">
     📜 <b>Versão {versao_grimorio}</b><br>
     <span style="font-size: 12px;">Cálculo 100% reativo ao ambiente.</span>
