@@ -97,7 +97,7 @@ st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
 # Controle de versão (Altere aqui nas próximas atualizações)
-versao_grimorio = "v0.8.0"
+versao_grimorio = "v0.8.1"
 
 # Renderiza a legenda com a versão em destaque
 st.sidebar.caption(f"📜 **Versão {versao_grimorio}**")
