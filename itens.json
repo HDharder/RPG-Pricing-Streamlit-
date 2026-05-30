@@ -1,0 +1,36 @@
+[
+  {
+    "nome_item": "Espada Longa +1",
+    "sintonizacao": "Não (x1.0)",
+    "consumo": "Permanente/Ilimitado (x1.0)",
+    "disruptivo": false,
+    "propriedades": [
+      {
+        "Propriedade Mágica": "Bônus de Ataque/Dano",
+        "Custo (P)": 3,
+        "Tipo": "Multiplicador (Por +1)",
+        "multiplicador": 2
+      }
+    ]
+  },
+  {
+    "nome_item": "Espada Vorpal",
+    "sintonizacao": "Sim (x0.75)",
+    "consumo": "Permanente/Ilimitado (x1.0)",
+    "disruptivo": true,
+    "propriedades": [
+      {
+        "Propriedade Mágica": "Bônus de Ataque/Dano",
+        "Custo (P)": 3,
+        "Tipo": "Multiplicador (Por +1)",
+        "multiplicador": 6
+      },
+      {
+        "Propriedade Mágica": "Magia (Níveis 7 a 9)",
+        "Custo (P)": 8,
+        "Tipo": "Multiplicador (Por Nível)",
+        "multiplicador": 9
+      }
+    ]
+  }
+]

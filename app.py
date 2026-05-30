@@ -14,10 +14,20 @@ if 'tabela_regras' not in st.session_state:
             dados_regras = json.load(f)
     except FileNotFoundError:
         # Prevenção de falhas caso a runa falhe ou o arquivo não seja encontrado
-        dados_regras = [] 
+        dados_regras = [
+            {"Propriedade Mágica": "Bônus de Ataque/Dano", "Custo (P)": 3, "Tipo": "Multiplicador (Por +1)"}
+        ]
         
     st.session_state.tabela_regras = pd.DataFrame(dados_regras)
+# 2. Carrega os Itens Prontos (Aba 4)
+if 'itens_prontos' not in st.session_state:
+    try:
+        with open('itens.json', 'r', encoding='utf-8') as f:
+            st.session_state.itens_prontos = json.load(f)
+    except FileNotFoundError:
+        st.session_state.itens_prontos = []
 
+# Variáveis globais
 if 'propriedades_item' not in st.session_state:
     st.session_state.propriedades_item = []
 
@@ -37,6 +47,36 @@ def adicionar_poder(nome_poder):
 
 def remover_poder(index):
     st.session_state.propriedades_item.pop(index)
+
+def carregar_item_pronto(item_data):
+    """Magia de Injeção: Carrega o item e ensina a tabela caso falte uma regra."""
+    # 1. Aplica as variáveis do item
+    st.session_state.req_sint = item_data.get("sintonizacao", "Não (x1.0)")
+    st.session_state.tipo_consumo = item_data.get("consumo", "Permanente/Ilimitado (x1.0)")
+    st.session_state.disruptivo = item_data.get("disruptivo", False)
+    
+    # 2. Limpa a forja atual
+    st.session_state.propriedades_item = []
+    
+    # 3. Processa cada propriedade do item
+    for prop in item_data["propriedades"]:
+        nome_prop = prop["Propriedade Mágica"]
+        
+        # Cria a propriedade na Forja e define o multiplicador (ex: +3)
+        novo_id = str(uuid.uuid4())
+        st.session_state.propriedades_item.append({"id": novo_id, "nome": nome_prop})
+        st.session_state[f"mult_{novo_id}"] = prop.get("multiplicador", 1)
+        
+        # 4. VERIFICAÇÃO DE DNA: A regra existe na Tabela Principal?
+        if nome_prop not in st.session_state.tabela_regras["Propriedade Mágica"].values:
+            nova_regra = {
+                "Propriedade Mágica": nome_prop,
+                "Custo (P)": prop["Custo (P)"],
+                "Tipo": prop["Tipo"]
+            }
+            # Se não existir, injeta a regra na tabela na mesma hora!
+            df_nova = pd.DataFrame([nova_regra])
+            st.session_state.tabela_regras = pd.concat([st.session_state.tabela_regras, df_nova], ignore_index=True)
 
 # ==========================================
 # 2. MENU LATERAL
@@ -58,7 +98,7 @@ st.sidebar.caption("Cálculo 100% reativo ao ambiente.")
 # ==========================================
 # 3. ABAS PRINCIPAIS
 # ==========================================
-aba1, aba2, aba3 = st.tabs(["⚒️ Forja de Itens", "📚 Tabela de Pontos", "⚙️ Fórmula & Configs"])
+aba1, aba2, aba3, aba4 = st.tabs(["⚒️ Forja de Itens", "📚 Tabela de Pontos", "⚙️ Fórmula & Configs", "💎 Exemplos"])
 
 with aba1:
     st.header("Forja de Itens Mágicos")
@@ -117,7 +157,7 @@ with aba1:
     col_sel, col_btn = st.columns([4, 1], vertical_alignment="bottom")
     with col_sel:
         opcoes_lista = st.session_state.tabela_regras["Propriedade Mágica"].tolist()
-        prop_selecionada = st.selectbox("Selecione um poder:", opcoes_lista)
+        prop_selecionada = st.selectbox("Selecione um poder:", opcoes_lista if opcoes_lista else ["Vazio"])
     with col_btn:
         st.button("➕ Adicionar", on_click=adicionar_poder, args=(prop_selecionada,), use_container_width=True)
 
@@ -187,7 +227,7 @@ with aba2:
 with aba3:
     st.header("Matemática do Sistema")
     st.latex(r"Custo = \left( \sum P \right)^{Exponente} \times A \times C \times M \times Base")
-    st.write("- **\sum P:** Soma dos Pontos das Propriedades Mágicas")
+    st.write("- **P:** Pontos das Propriedades Mágicas")
     st.write("- **A:** Modificador de Sintonização")
     st.write("- **C:** Modificador de Consumo")
     st.write("- **M:** Modificador do Mundo (Lateral)")
@@ -200,3 +240,23 @@ with aba3:
         st.session_state.const_base = st.number_input("Constante Base (Ouro):", value=st.session_state.const_base)
     with col_c2:
         st.session_state.const_exp = st.number_input("Constante Exponencial:", value=st.session_state.const_exp, min_value=1.0, max_value=2.5, step=0.1)
+
+# --- ABA 4: ITENS PRONTOS ---
+with aba4:
+    st.header("💎 Baú de Artefatos")
+    st.write("Carregue itens lendários com um clique. Se o item possuir uma propriedade desconhecida, ela será **adicionada magicamente à sua Tabela de Poderes (Aba 2)**!")
+    
+    if not st.session_state.itens_prontos:
+        st.warning("Nenhum item pronto encontrado em `itens.json`.")
+    else:
+        for item in st.session_state.itens_prontos:
+            with st.expander(f"🗡️ {item['nome_item']}"):
+                st.write(f"**Sintonização:** {item['sintonizacao']} | **Consumo:** {item['consumo']} | **Disruptivo:** {'Sim' if item['disruptivo'] else 'Não'}")
+                
+                # Exibe as propriedades
+                for prop in item['propriedades']:
+                    mult_texto = f" (x{prop['multiplicador']})" if "Multiplicador" in prop['Tipo'] else ""
+                    st.write(f"- {prop['Propriedade Mágica']}: {prop['Custo (P)']} pts{mult_texto}")
+                
+                # Botão de carregar
+                st.button(f"Carregar {item['nome_item']} na Forja", key=f"btn_load_{item['nome_item']}", on_click=carregar_item_pronto, args=(item,))
