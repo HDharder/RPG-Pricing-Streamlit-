@@ -30,6 +30,12 @@
         "Custo (P)": 8,
         "Tipo": "Multiplicador (Por Nível)",
         "multiplicador": 9
+      },
+      {
+        "Propriedade Mágica": "Dano Extra (Dados)",
+        "Custo (P)": 4,
+        "Tipo": "Multiplicador (Por Dado)",
+        "multiplicador": 6
       }
     ]
   }
